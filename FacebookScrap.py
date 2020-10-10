@@ -1,8 +1,11 @@
 from email import utils
+
+import requests
 from bs4 import BeautifulSoup
 from pip._internal.network import session
 from selenium import webdriver
 import time
+import lxml
 from flask import Flask,request, render_template, jsonify
 from selenium.webdriver.chrome.options import Options
 app = Flask(__name__, template_folder="templates")
@@ -11,9 +14,9 @@ app = Flask(__name__, template_folder="templates")
 def index():
     return render_template('home.html')
 @app.route('/facebook',  methods=['POST'])
-def facebook(page=None):
+def facebook():
     options = Options()
-    options.add_argument('--headless')
+    #options.add_argument('--headless')
     options.add_argument('--disable-gpu')
     driver = webdriver.Chrome(chrome_options=options)
     driver.implicitly_wait(30)
@@ -42,37 +45,31 @@ def facebook(page=None):
     page_name = request.json["page"]
 
     time.sleep(5)
-    REQUEST_URL = f'https://m.facebook.com/{page_name}'
-    driver.get(REQUEST_URL)
-    time.sleep(2)
-    scrolls = 15
-    retornar = []
-    for i in range(1,scrolls):
-      driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-      time.sleep(5)
-      page = driver.page_source
-      soup = BeautifulSoup(page, "html.parser")
-      #names = soup.find_all('div', {"class": ['du4w35lb k4urcfbm l9j0dhe7 sjgh65i0']})
-      publicaciones = soup.find_all('div', {"class": '_3drp'})
-      publicaciones = soup.find_all('article')
 
-      for publicacion in publicaciones:
-          try:
-            cantidadComentariosYCompartidos = publicacion.find('div', {"class": "_1fnt"})
-            print(cantidadComentariosYCompartidos.text)
-          except Exception as e:
-              print("No tiene comentarios", e)
-          links = publicacion.find_all('a', href=True, text=True)
-          link = links[1]['href']
-          print(link)
-          REQUEST_URL2 = f'https://m.facebook.com/{link}'
-          driver.get(REQUEST_URL2)
-          page2 = driver.page_source
-          soup2 = BeautifulSoup(page2, "html.parser")
-          comentarios = soup2.find_all('div', {"class": '_2b06'})
-          for comentario in comentarios:
-              print(comentario.text)
-              retornar.append(comentario.text)
+    if "https://www.facebook.com/" in page_name:
+        page_name = page_name.replace("https://www.facebook.com/", "https://m.facebook.com/")
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0',
+        }
+        response = requests.get(page_name, headers=headers).text
+    except Exception as e:
+        print("Error 1 - Obtener Response ", e)
+    driver.get(page_name)
+    retornar = []
+    pageDrive= driver.page_source
+    comentarios = BeautifulSoup(pageDrive, "lxml").find_all('div', {"class": '_2b06'})
+    #comentarios = BeautifulSoup(pageDrive, "lxml").find_all('div', {"class": '_14v5'})
+    #comentarios = BeautifulSoup(pageDrive, "lxml").find_all('div', {"class": '_2b04'})
+    #comentarios = BeautifulSoup(pageDrive, "lxml").find_all('div', {"class": '_2b05'})
+    for comentario in comentarios:
+        NombrePersona = comentario.next.text
+        ComentarioPersona = comentario.next.next_sibling.text
+        print(NombrePersona)
+        print(ComentarioPersona)
+        Coment = {"Nombre_Persona": NombrePersona,
+               "Comentario_Persona": ComentarioPersona}
+        retornar.append(Coment)
     return jsonify(retornar)
 
 if __name__ == '__main__':
