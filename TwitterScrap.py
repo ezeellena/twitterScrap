@@ -1,3 +1,5 @@
+import os
+
 from selenium import webdriver
 import time
 from PIL import Image
@@ -10,30 +12,27 @@ from waitress import serve
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
-from flask import Flask, render_template
-
+from flask import Flask, request, render_template
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__, template_folder="templates")
-@app.route('/')
-def hello():
+app.config['UPLOAD_FOLDER'] = './img'
+@app.route('/Twitter')
+def twitter(img=None):
+    return render_template("Twitter.html")
+@app.route('/Twittear', methods=["POST"])
+def Twittear(f=None):
+    f = request.files["image"]
     options = Options()
     options.add_argument("--headless")
-    options.add_argument("- disable-gpu")
+    options.add_argument("--disable-gpu")
     options.add_argument("- no-sandbox")
     options.add_argument("habilitar-automatización")
     options.add_argument("- disable- infobars ")
     options.add_argument(" - disable-dev-shm-use ")
-    global driver
     driver = webdriver.Chrome(options=options)
-    driver.get("https://twitter.com/")
-    element_text = driver.page_source
-    driver.quit()
-    return element_text
-@app.route('/Twittear')
-def twitter():
     driver = webdriver.Chrome()
     driver.implicitly_wait(30)
-    driver.maximize_window()
 
     # navigate to the application home page
     driver.get("https://twitter.com/login")
@@ -54,11 +53,11 @@ def twitter():
     password_field.send_keys("sdfgcv")
     time.sleep(1)
     password_field.submit()
-
-    driver.save_screenshot("i-am-on-twitter.png")
-
-    img = Image.open("i-am-on-twitter.png")
-    cropped_filename = "C:/Users/eellena/PycharmProjects/twitterScrap/cropped-i-am-on-twitter.png"
+    filename = secure_filename(f.filename)
+    f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    img = Image.open('./img/'+filename)
+    #img = Image.open(filename)
+    cropped_filename = "C:/Users/eellena/PycharmProjects/twitterScrap/img/"+filename
     img.crop((0, 0, img.size[0], 400)).save(cropped_filename)
     element = driver.find_element_by_xpath("//input[@type='file']")
     driver.execute_script("arguments[0].style.display = 'block';", element)
@@ -77,4 +76,4 @@ def twitter():
 
     driver.quit()
 if __name__ == '__main__':
-    serve(app,host = '0.0.0.0',port = 5000)
+    app.run(debug=True, port=5000, host='0.0.0.0')

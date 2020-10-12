@@ -1,3 +1,4 @@
+import json
 from email import utils
 
 import requests
@@ -16,7 +17,7 @@ def index():
 @app.route('/facebook',  methods=['POST'])
 def facebook():
     options = Options()
-    #options.add_argument('--headless')
+    options.add_argument('--headless')
     options.add_argument('--disable-gpu')
     driver = webdriver.Chrome(chrome_options=options)
     driver.implicitly_wait(30)
@@ -59,18 +60,30 @@ def facebook():
     retornar = []
     pageDrive= driver.page_source
     comentarios = BeautifulSoup(pageDrive, "lxml").find_all('div', {"class": '_2b06'})
-    #comentarios = BeautifulSoup(pageDrive, "lxml").find_all('div', {"class": '_14v5'})
-    #comentarios = BeautifulSoup(pageDrive, "lxml").find_all('div', {"class": '_2b04'})
-    #comentarios = BeautifulSoup(pageDrive, "lxml").find_all('div', {"class": '_2b05'})
+    cantidadComentarios = len(comentarios)
+    ingresoABuscarmg = BeautifulSoup(pageDrive, "lxml").find_all('a', {"class": '_45m8'})
+    ingresoABuscarmg = ingresoABuscarmg[0].attrs['href']
+    driver.get("https://m.facebook.com/"+ingresoABuscarmg)
+    pageMg = driver.page_source
+    LikesYcantComent = []
+    cantidadComentarios = {"cantidadComentarios",cantidadComentarios}
+    LikesYcantComent.append(cantidadComentarios)
+    mgmememd = BeautifulSoup(pageMg, "html.parser").find_all('span', {"class": '_10tn'})
+    for mg in mgmememd:
+        text = mg.contents[0].attrs['aria-label']
+        LikesYcantComent.append(text)
+
     for comentario in comentarios:
         NombrePersona = comentario.next.text
         ComentarioPersona = comentario.next.next_sibling.text
         print(NombrePersona)
         print(ComentarioPersona)
+
         Coment = {"Nombre_Persona": NombrePersona,
                "Comentario_Persona": ComentarioPersona}
         retornar.append(Coment)
-    return jsonify(retornar)
+
+    return jsonify(retornar,LikesYcantComent)
 
 if __name__ == '__main__':
     app.run(debug=True)
